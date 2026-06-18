@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GeoConvert — Online Coordinate Conversion</title>
+  <meta name="description" content="Convert coordinates between WGS84, UTM, MGRS, and national grid systems worldwide. Verify results live on an interactive map." />
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 2C7.86 2 4.5 5.36 4.5 9.5c0 5.25 7.5 12.5 7.5 12.5s7.5-7.25 7.5-12.5C19.5 5.36 16.14 2 12 2z" />
+        <circle cx="12" cy="9.5" r="2.75" />
+      </svg>
+      <div>
+        <h1>GeoConvert</h1>
+        <p>Professional Coordinate Conversion</p>
+      </div>
+    </div>
+    <div class="header-meta">
+      <span id="systemCount">— systems</span>
+      <a href="https://epsg.io" target="_blank" rel="noopener">EPSG reference ↗</a>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- ================= Converter panel ================= -->
+    <section class="panel converter" aria-label="Coordinate converter">
+      <!-- INPUT -->
+      <div class="card io-card">
+        <div class="card-head">
+          <h2>Input</h2>
+          <span class="badge" id="inputTypeBadge">geographic</span>
+        </div>
+
+        <label class="field">
+          <span class="field-label">Source coordinate system</span>
+          <select id="fromSystem" class="select"></select>
+        </label>
+
+        <div class="coord-grid" id="inputFields">
+          <label class="field">
+            <span class="field-label" id="inLabelY">Latitude</span>
+            <input id="inY" class="input mono" type="text" inputmode="decimal" placeholder="51.477928" autocomplete="off" />
+          </label>
+          <label class="field">
+            <span class="field-label" id="inLabelX">Longitude</span>
+            <input id="inX" class="input mono" type="text" inputmode="decimal" placeholder="-0.001545" autocomplete="off" />
+          </label>
+        </div>
+
+        <div class="dms-fields" id="dmsFields" hidden>
+          <div class="field">
+            <span class="field-label">Latitude — degrees / minutes / seconds</span>
+            <div class="dms-row">
+              <input id="latD" class="input mono dms-in" type="text" inputmode="numeric" placeholder="51" autocomplete="off" /><span class="dms-sym">°</span>
+              <input id="latM" class="input mono dms-in" type="text" inputmode="numeric" placeholder="28" autocomplete="off" /><span class="dms-sym">′</span>
+              <input id="latS" class="input mono dms-in" type="text" inputmode="decimal" placeholder="40.541" autocomplete="off" /><span class="dms-sym">″</span>
+              <select id="latH" class="select dms-h"><option value="N">N</option><option value="S">S</option></select>
+            </div>
+          </div>
+          <div class="field">
+            <span class="field-label">Longitude — degrees / minutes / seconds</span>
+            <div class="dms-row">
+              <input id="lngD" class="input mono dms-in" type="text" inputmode="numeric" placeholder="0" autocomplete="off" /><span class="dms-sym">°</span>
+              <input id="lngM" class="input mono dms-in" type="text" inputmode="numeric" placeholder="0" autocomplete="off" /><span class="dms-sym">′</span>
+              <input id="lngS" class="input mono dms-in" type="text" inputmode="decimal" placeholder="5.562" autocomplete="off" /><span class="dms-sym">″</span>
+              <select id="lngH" class="select dms-h"><option value="E">E</option><option value="W">W</option></select>
+            </div>
+          </div>
+        </div>
+
+        <label class="field grid-field" id="gridField" hidden>
+          <span class="field-label">Grid reference (MGRS / USNG)</span>
+          <input id="inGrid" class="input mono" type="text" placeholder="30U XC 99040 09328" autocomplete="off" />
+        </label>
+
+        <div class="opt-row">
+          <label class="checkbox" id="dmsToggleWrap">
+            <input type="checkbox" id="dmsToggle" />
+            <span>Enter as degrees / minutes / seconds</span>
+          </label>
+        </div>
+
+        <div class="quick-actions">
+          <button class="chip chip-locate" id="locateBtn" title="Use your current GPS location">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+            Use my location
+          </button>
+          <span class="quick-label">or try:</span>
+          <button class="chip" data-lat="51.477928" data-lng="-0.001545">Greenwich</button>
+          <button class="chip" data-lat="40.689247" data-lng="-74.044502">Liberty</button>
+          <button class="chip" data-lat="-33.856784" data-lng="151.215297">Sydney</button>
+          <button class="chip" data-lat="35.658581" data-lng="139.745438">Tokyo</button>
+        </div>
+      </div>
+
+      <!-- ACTIONS -->
+      <div class="action-bar">
+        <button id="swapBtn" class="btn ghost" title="Swap source and target">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h11l-3-3M17 17H6l3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Swap
+        </button>
+        <button id="convertBtn" class="btn primary">Convert →</button>
+      </div>
+
+      <!-- OUTPUT -->
+      <div class="card io-card">
+        <div class="card-head">
+          <h2>Output</h2>
+          <span class="badge" id="outputTypeBadge">projected</span>
+        </div>
+
+        <label class="field">
+          <span class="field-label">Target coordinate system</span>
+          <select id="toSystem" class="select"></select>
+        </label>
+
+        <div class="result" id="resultBox">
+          <div class="result-row">
+            <span class="result-key" id="outLabelY">Northing</span>
+            <span class="result-val mono" id="outY">—</span>
+            <button class="copy" data-copy="outY" title="Copy">⧉</button>
+          </div>
+          <div class="result-row">
+            <span class="result-key" id="outLabelX">Easting</span>
+            <span class="result-val mono" id="outX">—</span>
+            <button class="copy" data-copy="outX" title="Copy">⧉</button>
+          </div>
+        </div>
+
+        <div class="result secondary">
+          <div class="result-row">
+            <span class="result-key">WGS84 (lat, lng)</span>
+            <span class="result-val mono" id="outWgs">—</span>
+            <button class="copy" data-copy="outWgs" title="Copy">⧉</button>
+          </div>
+          <div class="result-row">
+            <span class="result-key">DMS</span>
+            <span class="result-val mono" id="outDms">—</span>
+            <button class="copy" data-copy="outDms" title="Copy">⧉</button>
+          </div>
+        </div>
+
+        <p class="status" id="status" role="status"></p>
+      </div>
+    </section>
+
+    <!-- ================= Map panel ================= -->
+    <section class="panel map-panel" aria-label="Map preview">
+      <div id="map"></div>
+      <div class="map-footer">
+        <div class="coord-readout">
+          <span class="dot"></span>
+          <span id="mapReadout">Click the map to drop a point, or convert a coordinate above.</span>
+        </div>
+        <div class="basemap-switch">
+          <button class="base-btn active" data-base="streets">Streets</button>
+          <button class="base-btn" data-base="satellite">Satellite</button>
+          <button class="base-btn" data-base="topo">Topographic</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <span>GeoConvert · transformations by proj4js · map © OpenStreetMap, Esri contributors</span>
+    <span>Datum shifts are approximate (±1 m typical); use official transforms for survey-grade work.</span>
+  </footer>
+
+  <!-- Libraries -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mgrs@2.1.0/dist/mgrs.min.js"></script>
+
+  <!-- App -->
+  <script src="systems.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
